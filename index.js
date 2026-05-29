@@ -1,4 +1,4 @@
-const express = require('express');
+uconst express = require('express');
 const cors = require('cors');
 const fetch = require('node-fetch');
 
@@ -87,7 +87,7 @@ app.post('/api/v3/trading/accounts', async (req, res) => {
     }
 });
 
-// ROTA 3: Gera o OTP Seguro para abrir o Canal WebSocket Autenticado da v3
+// ROTA 3: Gera o OTP Seguro (Versão Avançada com Diagnóstico de Erros)
 app.post('/api/v3/trading/generate-otp', async (req, res) => {
     try {
         const { token, accountId } = req.body;
@@ -107,9 +107,17 @@ app.post('/api/v3/trading/generate-otp', async (req, res) => {
 
         const otpData = await otpResponse.json();
 
+        // ============================================================
+        // DIAGNÓSTICO CRÍTICO: Imprime o erro exato da Deriv no Render
+        // ============================================================
+        console.log(`========== ERRO DETALHADO OTP (${accountId}) ==========`);
+        console.log(JSON.stringify(otpData, null, 2));
+        console.log("======================================================");
+
         if (!otpResponse.ok || !otpData.websocket_url) {
-            console.error("Erro na Deriv ao gerar OTP:", otpData);
-            return res.status(otpResponse.status).json({ error: "Não foi possível gerar a sessão OTP." });
+            // Envia o motivo real devolvido pela Deriv para o Front-End saber o que se passa
+            const mensagemErro = otpData.error?.message || otpData.error || "Rejeitado pela API Deriv.";
+            return res.status(otpResponse.status).json({ error: mensagemErro });
         }
 
         return res.json({ websocket_url: otpData.websocket_url });
@@ -117,12 +125,4 @@ app.post('/api/v3/trading/generate-otp', async (req, res) => {
         console.error("Erro interno no endpoint gerar-otp:", error);
         return res.status(500).json({ error: "Falha crítica ao gerar segurança no Render." });
     }
-});
-
-app.get('/', (req, res) => {
-    res.send('Servidor do UchilaBot Pro v3 está online e operacional no Render! 🚀');
-});
-
-app.listen(PORT, () => {
-    console.log(`Servidor a rodar com sucesso na porta ${PORT}`);
 });
