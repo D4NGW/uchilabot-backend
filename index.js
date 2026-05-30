@@ -19,7 +19,7 @@ app.post('/api/v3/auth/token', async (req, res) => {
         const { code, code_verifier, redirect_uri } = req.body;
 
         if (!code || !code_verifier || !redirect_uri) {
-            return res.status(400).json({ error: "Parâmetros em falta para a troca de token." });
+            return res.status(400).json({ error: "Parâmetros em falta." });
         }
 
         const params = new URLSearchParams();
@@ -38,18 +38,16 @@ app.post('/api/v3/auth/token', async (req, res) => {
         const dadosToken = await respostaDeriv.json();
 
         if (!respostaDeriv.ok || dadosToken.error) {
-            console.error("Erro na Deriv ao trocar Token:", dadosToken);
             return res.status(respostaDeriv.status).json({ error: dadosToken.error_description || "Erro de autorização." });
         }
 
         return res.json(dadosToken);
     } catch (error) {
-        console.error("Erro interno no endpoint trocar-token:", error);
-        return res.status(500).json({ error: "Falha crítica no servidor Render." });
+        return res.status(500).json({ error: "Falha no servidor Render." });
     }
 });
 
-// ROTA 2: Obtém as contas disponíveis da Deriv v3 (COM LOGS DE AUDITORIA E SUPORTE HÍBRIDO)
+// ROTA 2: Obtém as contas disponíveis da Deriv v3
 app.post('/api/v3/trading/accounts', async (req, res) => {
     try {
         const { token } = req.body;
@@ -65,35 +63,25 @@ app.post('/api/v3/trading/accounts', async (req, res) => {
         });
 
         const contasData = await contasResponse.json();
-        
-        // ============================================================
-        // LOGS SEGUROS PARA VERIFICAÇÃO NO PAINEL DO RENDER
-        // ============================================================
-        console.log("========== CONTAS DERIV (RESPOSTA REAL V3) ==========");
-        console.log(JSON.stringify(contasData, null, 2));
-        console.log("======================================================");
 
         if (!contasResponse.ok) {
-            return res.status(contasResponse.status).json({ error: contasData.error || "Erro ao listar contas na Deriv." });
+            return res.status(contasResponse.status).json({ error: "Erro ao listar contas na Deriv." });
         }
 
-        // Mapeamento dinâmico: Aceita tanto o formato 'accounts' quanto o formato 'data'
         const listaFinal = contasData.accounts || contasData.data || [];
-
         return res.json({ accounts: listaFinal });
     } catch (error) {
-        console.error("Erro ao obter contas via Render:", error);
         return res.status(500).json({ error: "Falha interna ao processar contas." });
     }
 });
 
-// ROTA 3: Gera o OTP Seguro (Versão Avançada com Diagnóstico de Erros)
+// ROTA 3: Gera o OTP Seguro (Corrigida e Simplificada para Evitar Erros de Compilação)
 app.post('/api/v3/trading/generate-otp', async (req, res) => {
     try {
         const { token, accountId } = req.body;
 
         if (!token || !accountId) {
-            return res.status(400).json({ error: "Token ou ID da conta em falta." });
+            return res.status(400).json({ error: "Parâmetros em falta." });
         }
 
         const otpResponse = await fetch(`https://api.derivws.com/trading/v1/options/accounts/${accountId}/otp`, {
@@ -107,22 +95,22 @@ app.post('/api/v3/trading/generate-otp', async (req, res) => {
 
         const otpData = await otpResponse.json();
 
-        // ============================================================
-        // DIAGNÓSTICO CRÍTICO: Imprime o erro exato da Deriv no Render
-        // ============================================================
-        console.log(`========== ERRO DETALHADO OTP (${accountId}) ==========`);
-        console.log(JSON.stringify(otpData, null, 2));
-        console.log("======================================================");
-
         if (!otpResponse.ok || !otpData.websocket_url) {
-            // Envia o motivo real devolvido pela Deriv para o Front-End saber o que se passa
-            const mensagemErro = otpData.error?.message || otpData.error || "Rejeitado pela API Deriv.";
-            return res.status(otpResponse.status).json({ error: mensagemErro });
+            const msgErro = (otpData.error && otpData.error.message) ? otpData.error.message : "Rejeitado pela API Deriv.";
+            return res.status(otpResponse.status).json({ error: msgErro });
         }
 
         return res.json({ websocket_url: otpData.websocket_url });
     } catch (error) {
-        console.error("Erro interno no endpoint gerar-otp:", error);
         return res.status(500).json({ error: "Falha crítica ao gerar segurança no Render." });
     }
 });
+
+app.get('/', (req, res) => {
+    res.send('Servidor do UchilaBot Pro v3 está online e operacional no Render! 🚀');
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
+});
+
